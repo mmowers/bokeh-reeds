@@ -23,8 +23,9 @@ Easiest way, with Anaconda, from the command line:
 conda install bokeh
 
 Then, git clone this repo onto your computer.
-- Side note: I had an issue pushing to this repo with a putty generated key. To fix, according to instructions i wrote for NREL repo, i had to change origin in .git/config from git@ to https:// and replace the colon with a slash. Now it makes me login when i push...
+- Side note: I had an issue pushing to this repo with a putty generated key. To fix, according to instructions i wrote for NREL repo, i had to change origin in .git/config from git@ to https://. See https://help.github.com/articles/which-remote-url-should-i-use/ and
+https://help.github.com/articles/changing-a-remote-s-url/
 
 ## Running
-    From command line, cd into folder just above this git repo
-    bokeh serve --show bokeh-reeds
+From command line, cd into this git repo and type
+    bokeh serve --show .
