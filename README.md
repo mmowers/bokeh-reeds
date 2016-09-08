@@ -1,4 +1,4 @@
-#### Bokeh
+## Bokeh
 This tool uses bokeh, built on python:
 http://bokeh.pydata.org/en/latest/.
 The site has good documentation in the User Guide and Reference.
@@ -9,7 +9,7 @@ https://groups.google.com/a/continuum.io/forum/#!forum/bokeh
 And of course, python has pretty good documentation too:
 https://docs.python.org/2.7/tutorial/
 
-#### Setting Up
+## Setting Up
 Get Anaconda for python 2.7 at:
 https://www.continuum.io/downloads
 
@@ -24,6 +24,6 @@ conda install bokeh
 
 Then, git clone this repo onto your computer
 
-#### Running
+## Running
     From command line, cd into folder just above this git repo
     bokeh serve --show bokeh-reeds
