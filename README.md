@@ -22,7 +22,8 @@ http://bokeh.pydata.org/en/latest/docs/installation.html
 Easiest way, with Anaconda, from the command line:
 conda install bokeh
 
-Then, git clone this repo onto your computer
+Then, git clone this repo onto your computer.
+- Side note: I had an issue pushing to this repo with a putty generated key. To fix, according to instructions i wrote for NREL repo, i had to change origin in .git/config from git@ to https:// and replace the colon with a slash. Now it makes me login when i push...
 
 ## Running
     From command line, cd into folder just above this git repo
