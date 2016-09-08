@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Bokeh ReEDS</title>
+    {{ bokeh_css }}
+    {{ bokeh_js }}
+    <style>
+      {% include 'styles.css' %}
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      {{ plot_div|indent(8) }}
+    </div>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js'></script>
+    <script>
+      {% include 'scripts.js' %}
+    </script>
+    {{ plot_script|indent(8) }}
+  </body>
+</html>
