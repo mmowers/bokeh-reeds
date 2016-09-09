@@ -1,3 +1,19 @@
 .bk-root .bk-widget{
     margin-top: 0;
 }
+.bk-markup{
+    font-weight: bold;
+}
+#modelid_scenarios_heading{
+    color: blue;
+    cursor: pointer;
+}
+#modelid_filters_heading{
+    margin-top: 30px;
+}
+.bk-plot-layout{
+    display: inline-block;
+}
+.bk-logo{
+    display: none !important;
+}

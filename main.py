@@ -13,7 +13,7 @@ import bokeh.models.widgets as bmw
 #set globals
 gdx_structure = col.OrderedDict((
     ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n'}),
-    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value']}),
+    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n'}),
 ))
 
 runs_path = 'C:\\Users\\mmowers\\Bokeh\\runs\\'
@@ -22,7 +22,8 @@ scenarios = os.walk(runs_path).next()[1]
 regions_full = {
     'n': ['p'+str(i) for i in range(1,136)],
 }
-techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'transmission', 'il', 'canada', 'curtail', 'phev', 'excess', 'reqt', 'cofire-rebate', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
+techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
+#techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'transmission', 'il', 'canada', 'curtail', 'phev', 'excess', 'reqt', 'cofire-rebate', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
 years_full = range(2010, 2052, 2)
 
 hierarchy_input = pd.read_csv('hierarchy.csv', header=None)
@@ -37,20 +38,20 @@ plots = {}
 plot_list = []
 
 widgets = col.OrderedDict((
-    ('scenarios_heading', bmw.Div(text='''Select Scenarios:''')),
-    ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=[0,1])),
-    ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'])),
-    ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys())),
-    ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'])),
-    ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'])),
-    ('xaxis', bmw.Select(title='X-axis', value='year', options=['year', 'tech'])),
-    ('series', bmw.Select(title='Series', value='tech', options=['tech', 'year'])),
-    ('filters_heading', bmw.Div(text='''Select Filters:''')),
-    ('regtype', bmw.Select(title='Region Type', value='country', options=hierarchy_column_names)),
-    ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist())),
-    ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full])),
-    ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'])),
-    ('tech', bmw.Select(value='All techs', options=['All techs'] + techs_full)),
+    ('scenarios_heading', bmw.Div(text='Select Scenarios', id='scenarios_heading')),
+    ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
+    ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'], id='scenarios_compare')),
+    ('result', bmw.Select(value=gdx_structure.keys()[1], options=gdx_structure.keys(), id='result')),
+    ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
+    ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
+    ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
+    ('series', bmw.Select(title='Series: ', value='tech', options=['tech', 'year'], id='series')),
+    ('filters_heading', bmw.Div(text='Select Filters:', id='filters_heading')),
+    ('regtype', bmw.Select(title='Region Type', value='country', options=hierarchy_column_names, id='regtype')),
+    ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
+    ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
+    ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
+    ('tech', bmw.Select(value='All techs', options=['All techs'] + techs_full, id='tech')),
 ))
 
 def get_dataframe(scenario, result_type):
@@ -151,6 +152,6 @@ widgets['regtype'].on_change('value', update_regtype)
 widgets['scenarios'].on_change('value', update_scenarios)
 
 initialize_plots()
-filters = bl.widgetbox(widgets.values(), width=300)
-plots_display = bl.column(plot_list, width=1000)
+filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
+plots_display = bl.column(plot_list, width=1000, id='plots_section')
 bio.curdoc().add_root(bl.row([filters, plots_display]))
