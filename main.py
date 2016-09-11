@@ -34,14 +34,19 @@ hierarchy.columns = hierarchy_column_names
 colors = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
 colors = colors*10
 
-plots = {}
+data_obj = {}
+for result in gdx_structure.keys():
+    data_obj[result] = {}
+    for scenario in scenarios:
+        data_obj[result][scenario] = {'dataframe': 0}
+
 plot_list = []
 
 widgets = col.OrderedDict((
     ('scenarios_heading', bmw.Div(text='Select Scenarios', id='scenarios_heading')),
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
     ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'], id='scenarios_compare')),
-    ('result', bmw.Select(value=gdx_structure.keys()[1], options=gdx_structure.keys(), id='result')),
+    ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
     ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
     ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
     ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
@@ -98,43 +103,43 @@ def filter_dataframe(df_base):
     return df
 
 def initialize_plots():
-    for scen_num in widgets['scenarios'].active:
-        scenario_name = scenarios[scen_num]
+    for scenario_name in scenarios:
         result = widgets['result'].value
         df_base = get_dataframe(scenario_name, result)
 
+        #save data
+        data_obj[result][scenario_name]['dataframe'] = df_base
+
         #build plot
-        plots[scenario_name] = {}
         plot = {
             'figure': bp.Figure(toolbar_location='above', tools='save,pan,box_zoom,reset', width=250, height=250),
-            'series': {},
-            'dataframe': df_base
+            'series': [],
         }
         plot['figure'].title.text = scenario_name
-        #plot['figure'].yaxis.axis_label = gdx_structure[result]['unit']
         df = filter_dataframe(df_base)
         if widgets['charttype'].value == 'Stacked Area':
             x_values = np.hstack((df.index, df.index[::-1]))
             y_values = stack_lists(df.transpose().values.tolist())
             for i, series_name in enumerate(df.columns.values.tolist()):
-                plot['series'][series_name] = plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = colors[i], line_color = None, line_width = None, name = series_name)
+                plot['series'].append(plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = colors[i], line_color = None, line_width = None, name = series_name))
         
-        plots[scenario_name][result] = plot
-        plot_list.append(plot['figure'])
+        plot_list.append(plot)
 
 def refilter_plots():
-    for scen_num in widgets['scenarios'].active:
-        scenario_name = scenarios[scen_num]
+    for i, scenario_name in enumerate(scenarios):
         result = widgets['result'].value
-        df_base = plots[scenario_name][result]['dataframe']
+        df_base = data_obj[result][scenario_name]['dataframe']
+        if type(df_base) is int:
+            df_base = get_dataframe(scenario_name, result)
+            data_obj[result][scenario_name]['dataframe'] = df_base
         df = filter_dataframe(df_base)
 
         #adjust plot data
         if widgets['charttype'].value == 'Stacked Area':
             x_values = np.hstack((df.index, df.index[::-1]))
             y_values = stack_lists(df.transpose().values.tolist())
-        for i, series_name in enumerate(df.columns.values.tolist()):
-            plots[scenario_name][result]['series'][series_name].data_source.data['y'] = y_values[i]
+        for j, series_name in enumerate(df.columns.values.tolist()):
+            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
 
 def general_filter_update(attrname, old, new):
     refilter_plots()
@@ -142,16 +147,13 @@ def general_filter_update(attrname, old, new):
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
-    refilter_plots()
 
-def update_scenarios(attrname, old, new):
-    refilter_plots()
-
+widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
-widgets['scenarios'].on_change('value', update_scenarios)
 
 initialize_plots()
+plots = [p['figure'] for p in plot_list]
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
-plots_display = bl.column(plot_list, width=1000, id='plots_section')
+plots_display = bl.column(plots, width=1000, id='plots_section')
 bio.curdoc().add_root(bl.row([filters, plots_display]))
