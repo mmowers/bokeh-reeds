@@ -12,8 +12,8 @@ import bokeh.models.widgets as bmw
 
 #set globals
 gdx_structure = col.OrderedDict((
-    ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n'}),
-    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n'}),
+    ('Capacity_GW', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n'}),
+    ('Generation_TWh', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n'}),
 ))
 
 runs_path = 'C:\\Users\\mmowers\\Bokeh\\runs\\'
@@ -41,7 +41,7 @@ widgets = col.OrderedDict((
     ('scenarios_heading', bmw.Div(text='Select Scenarios', id='scenarios_heading')),
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
     ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'], id='scenarios_compare')),
-    ('result', bmw.Select(value=gdx_structure.keys()[1], options=gdx_structure.keys(), id='result')),
+    ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
     ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
     ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
     ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
@@ -136,6 +136,30 @@ def refilter_plots():
         for i, series_name in enumerate(df.columns.values.tolist()):
             plots[scenario_name][result]['series'][series_name].data_source.data['y'] = y_values[i]
 
+def update_results():
+    for scen_num in widgets['scenarios'].active:
+        scenario_name = scenarios[scen_num]
+        result = widgets['result'].value
+        df_base = get_dataframe(scenario_name, result)
+
+        #build plot
+        plot = {
+            'figure': bp.Figure(toolbar_location='above', tools='save,pan,box_zoom,reset', width=250, height=250),
+            'series': {},
+            'dataframe': df_base
+        }
+        plot['figure'].title.text = scenario_name
+        #plot['figure'].yaxis.axis_label = gdx_structure[result]['unit']
+        df = filter_dataframe(df_base)
+        if widgets['charttype'].value == 'Stacked Area':
+            x_values = np.hstack((df.index, df.index[::-1]))
+            y_values = stack_lists(df.transpose().values.tolist())
+            for i, series_name in enumerate(df.columns.values.tolist()):
+                plot['series'][series_name] = plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = colors[i], line_color = None, line_width = None, name = series_name)
+        
+        plots[scenario_name][result] = plot
+        plot_list.append(plot['figure'])
+
 def general_filter_update(attrname, old, new):
     refilter_plots()
 
@@ -147,11 +171,18 @@ def update_regtype(attrname, old, new):
 def update_scenarios(attrname, old, new):
     refilter_plots()
 
+def update_result(attrname, old, new):
+    update_results()
+    plots_initial.children = plot_list
+    #I was trying to add another bl.column to put into plots_full for the new result type, but that didn't seem to work...
+
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
 widgets['scenarios'].on_change('value', update_scenarios)
+widgets['result'].on_change('value', update_result)
 
 initialize_plots()
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
-plots_display = bl.column(plot_list, width=1000, id='plots_section')
-bio.curdoc().add_root(bl.row([filters, plots_display]))
+plots_initial = bl.column(plot_list, width=1000, id='plot_sec_'+widgets['result'].value)
+plots_full = bl.column(plots_initial, id='plots_section')
+bio.curdoc().add_root(bl.row([filters, plots_full]))
