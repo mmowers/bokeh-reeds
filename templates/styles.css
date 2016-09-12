@@ -17,3 +17,6 @@
 .bk-logo{
     display: none !important;
 }
+#modelid_scenarios{
+    display:none;
+}

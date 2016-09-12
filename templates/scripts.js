@@ -1,5 +1,4 @@
 $(document).ready(function(){
-    $("<style type='text/css'> #modelid_scenarios{ display:none;} </style>").appendTo("head");
     $('body').on('click', '#modelid_scenarios_heading', function(){
         $('#modelid_scenarios').toggle();
     });
