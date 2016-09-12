@@ -131,7 +131,32 @@ def filter_dataframe(df_base):
     df = df[display_techs.keys()]
     return df
 
-def initialize_plots():
+def fill_plots():
+    for scenario in scenarios:
+        fill_plot(scenario)
+
+def fill_plot(scenario):
+    result = widgets['result'].value
+    df_base = data_obj[result][scenario]['dataframe']
+    if type(df_base) is int:
+        df_base = get_dataframe(scenario, result)
+        data_obj[result][scenario]['dataframe'] = df_base
+    df = filter_dataframe(df_base)
+    if widgets['charttype'].value == 'Stacked Area':
+        fill_stacked_areas(df, scenario)
+
+def fill_stacked_areas(df, scenario):
+    i = scenarios.index(scenario)
+    x_values = np.hstack((df.index, df.index[::-1]))
+    y_values = stack_lists(df.transpose().values.tolist())
+    for j, series_name in enumerate(df.columns.values.tolist()):
+        if j < len(plot_list[i]['series']):
+            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
+        else:
+            plot_list[i]['series'].append(plot_list[i]['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
+
+
+def initialize():
     for scenario_name in scenarios:
         result = widgets['result'].value
         df_base = get_dataframe(scenario_name, result)
@@ -139,39 +164,17 @@ def initialize_plots():
         #save data
         data_obj[result][scenario_name]['dataframe'] = df_base
 
-        #build plot
+        #build plots
         plot = {
             'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
             'series': [],
         }
         plot['figure'].title.text = scenario_name
-        df = filter_dataframe(df_base)
-        if widgets['charttype'].value == 'Stacked Area':
-            x_values = np.hstack((df.index, df.index[::-1]))
-            y_values = stack_lists(df.transpose().values.tolist())
-            for i, series_name in enumerate(df.columns.values.tolist()):
-                plot['series'].append(plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
-        
         plot_list.append(plot)
-
-def refilter_plots():
-    for i, scenario_name in enumerate(scenarios):
-        result = widgets['result'].value
-        df_base = data_obj[result][scenario_name]['dataframe']
-        if type(df_base) is int:
-            df_base = get_dataframe(scenario_name, result)
-            data_obj[result][scenario_name]['dataframe'] = df_base
-        df = filter_dataframe(df_base)
-
-        #adjust plot data
-        if widgets['charttype'].value == 'Stacked Area':
-            x_values = np.hstack((df.index, df.index[::-1]))
-            y_values = stack_lists(df.transpose().values.tolist())
-        for j, series_name in enumerate(df.columns.values.tolist()):
-            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
+    fill_plots()
 
 def general_filter_update(attrname, old, new):
-    refilter_plots()
+    fill_plots()
 
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
@@ -181,7 +184,7 @@ widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
 
-initialize_plots()
+initialize()
 plots = [p['figure'] for p in plot_list]
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
 plots_display = bl.column(plots, width=1000, id='plots_section')
