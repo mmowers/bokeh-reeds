@@ -112,7 +112,7 @@ def initialize_plots():
 
         #build plot
         plot = {
-            'figure': bp.Figure(toolbar_location='above', tools='save,pan,box_zoom,reset', width=250, height=250),
+            'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
             'series': [],
         }
         plot['figure'].title.text = scenario_name
