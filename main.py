@@ -24,7 +24,7 @@ regions_full = {
 }
 techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
 #techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'transmission', 'il', 'canada', 'curtail', 'phev', 'excess', 'reqt', 'cofire-rebate', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
-tech_map = col.OrderedDict((
+display_techs = col.OrderedDict((
     ('Conv Coal', {'techs': ['coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'cofireold', 'cofirenew',], 'color': '#5e4fa2'}),
     ('Coal CCS', {'techs': ['coal-ccs','coal-ccs-nsp'], 'color': '#3288bd'}),
     ('Gas CC', {'techs': ['gas-cc','gas-cc-nsp'], 'color': '#66c2a5'}),
@@ -38,6 +38,14 @@ tech_map = col.OrderedDict((
     ('Dedicated Bio', {'techs': ['biopower',], 'color': '#9e0142'}),
     ('Other Renew', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs', 'cofirebiomass', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave',], 'color': '#5e4fa2'}),
 ))
+tech_map = {}
+for name in display_techs:
+    for raw_tech in display_techs[name]['techs']:
+        tech_map[raw_tech] = name
+
+display_techs_w_color = [name+':'+display_techs[name]['color'] for name in display_techs]
+display_techs_w_color.reverse()
+
 leftovers = ['undisc', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response']
 
 years_full = range(2010, 2052, 2)
@@ -68,7 +76,7 @@ widgets = col.OrderedDict((
     ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
     ('series', bmw.Select(title='Series: ', value='tech', options=['tech', 'year'], id='series')),
     ('filters_heading', bmw.Div(text='Select Filters:', id='filters_heading')),
-    ('tech', bmw.Select(value='All techs', options=['All techs'] + techs_full, id='tech')),
+    ('tech', bmw.Select(value='All techs', options=['All techs']+display_techs_w_color, id='tech')),
     ('regtype', bmw.Select(value='country', options=hierarchy_column_names, id='regtype')),
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
@@ -83,7 +91,9 @@ def get_dataframe(scenario, result_type):
     multi_index_names = []
     if 'tech' in df.columns:
         df['tech'] = df['tech'].str.lower()
-        multi_index_iterables.append(techs_full)
+        df = df.replace({'tech': tech_map})
+        df = df[df['tech'].isin(display_techs.keys())]
+        multi_index_iterables.append(display_techs.keys())
         multi_index_names.append('tech')
     if 'reg' in gdx_result:
         multi_index_iterables.append(regions_full[gdx_result['reg']])
@@ -95,6 +105,8 @@ def get_dataframe(scenario, result_type):
         multi_index_names.append('year')
     if 'value' in df.columns:
         df['value'] = df['value']* gdx_result['mult']
+    
+    df = df.groupby(multi_index_names, as_index=False, sort=False)['value'].sum()
     df_index = pd.MultiIndex.from_product(multi_index_iterables, names=multi_index_names)
     df = df.set_index(multi_index_names).reindex(df_index).reset_index()
     df = df.fillna(0)
@@ -116,6 +128,7 @@ def filter_dataframe(df_base):
     df = df_base[df_base[widgets['regtype'].value].isin([widgets['region'].value])]
     df = df.groupby([widgets['series'].value, widgets['xaxis'].value], as_index=False, sort=False)['value'].sum()
     df = df.pivot(index=widgets['xaxis'].value, columns=widgets['series'].value, values='value')
+    df = df[display_techs.keys()]
     return df
 
 def initialize_plots():
@@ -137,7 +150,7 @@ def initialize_plots():
             x_values = np.hstack((df.index, df.index[::-1]))
             y_values = stack_lists(df.transpose().values.tolist())
             for i, series_name in enumerate(df.columns.values.tolist()):
-                plot['series'].append(plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = colors[i], line_color = None, line_width = None, name = series_name))
+                plot['series'].append(plot['figure'].patch(x_values, y_values[i], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
         
         plot_list.append(plot)
 
