@@ -81,7 +81,77 @@ widgets = col.OrderedDict((
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
+    ('rescale', bmw.Button(label='Sync Axes', button_type='success')),
 ))
+
+def initialize():
+    for scenario_name in scenarios:
+        result = widgets['result'].value
+        df_base = get_dataframe(scenario_name, result)
+
+        #save data
+        data_obj[result][scenario_name]['dataframe'] = df_base
+
+        #build plots
+        plot = {
+            'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
+            'series': [],
+            'xmin': 0,
+            'xmax': 0,
+            'ymin': 0,
+            'ymax': 0,
+        }
+        plot['figure'].title.text = scenario_name
+        plot['figure'].xaxis.major_label_orientation = 'vertical'
+        plot['figure'].xaxis.major_label_standoff = 25
+        plot_list.append(plot)
+    fill_plots()
+
+def fill_plots():
+    for scenario in scenarios:
+        fill_plot(scenario)
+
+def rescale_plots():
+    x_min = min([a['x_min'] for a in plot_list])
+    x_max = max([a['x_max'] for a in plot_list])
+    y_min = min([a['y_min'] for a in plot_list])
+    y_max = max([a['y_max'] for a in plot_list])
+
+    for plot in plot_list:
+        plot['figure'].x_range.start = x_min
+        plot['figure'].x_range.end = x_max
+        plot['figure'].y_range.start = y_min
+        plot['figure'].y_range.end = y_max
+
+def fill_plot(scenario):
+    result = widgets['result'].value
+    df_base = data_obj[result][scenario]['dataframe']
+    if type(df_base) is int:
+        df_base = get_dataframe(scenario, result)
+        data_obj[result][scenario]['dataframe'] = df_base
+    df = filter_dataframe(df_base)
+    if widgets['charttype'].value == 'Stacked Area':
+        fill_stacked_areas(df, scenario)
+
+def fill_stacked_areas(df, scenario):
+    i = scenarios.index(scenario)
+    x_values = np.hstack((df.index, df.index[::-1]))
+    y_values = stack_lists(df.transpose().values.tolist())
+    x_min = np.amin(x_values)
+    x_max = np.amax(x_values)
+    y_min = 0
+    y_max = 0
+    for j, series_name in enumerate(df.columns.values.tolist()):
+        if j < len(plot_list[i]['series']):
+            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
+        else:
+            plot_list[i]['series'].append(plot_list[i]['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
+        if max(y_values[j]) > y_max: y_max = max(y_values[j])
+    plot_list[i]['x_min'] = x_min
+    plot_list[i]['x_max'] = x_max
+    plot_list[i]['y_min'] = y_min
+    plot_list[i]['y_max'] = y_max
+
 
 def get_dataframe(scenario, result_type):
     gdx_result = gdx_structure[result_type]
@@ -131,48 +201,6 @@ def filter_dataframe(df_base):
     df = df[display_techs.keys()]
     return df
 
-def fill_plots():
-    for scenario in scenarios:
-        fill_plot(scenario)
-
-def fill_plot(scenario):
-    result = widgets['result'].value
-    df_base = data_obj[result][scenario]['dataframe']
-    if type(df_base) is int:
-        df_base = get_dataframe(scenario, result)
-        data_obj[result][scenario]['dataframe'] = df_base
-    df = filter_dataframe(df_base)
-    if widgets['charttype'].value == 'Stacked Area':
-        fill_stacked_areas(df, scenario)
-
-def fill_stacked_areas(df, scenario):
-    i = scenarios.index(scenario)
-    x_values = np.hstack((df.index, df.index[::-1]))
-    y_values = stack_lists(df.transpose().values.tolist())
-    for j, series_name in enumerate(df.columns.values.tolist()):
-        if j < len(plot_list[i]['series']):
-            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
-        else:
-            plot_list[i]['series'].append(plot_list[i]['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
-
-
-def initialize():
-    for scenario_name in scenarios:
-        result = widgets['result'].value
-        df_base = get_dataframe(scenario_name, result)
-
-        #save data
-        data_obj[result][scenario_name]['dataframe'] = df_base
-
-        #build plots
-        plot = {
-            'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
-            'series': [],
-        }
-        plot['figure'].title.text = scenario_name
-        plot_list.append(plot)
-    fill_plots()
-
 def general_filter_update(attrname, old, new):
     fill_plots()
 
@@ -180,9 +208,13 @@ def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
 
+def rescale():
+    rescale_plots()
+
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
+widgets['rescale'].on_click(rescale)
 
 initialize()
 plots = [p['figure'] for p in plot_list]
