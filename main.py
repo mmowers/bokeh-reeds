@@ -114,22 +114,22 @@ def initialize():
     combined_plot['figure'].xaxis.major_label_standoff = 25
     plot_list['combined'] = combined_plot
 
-    fill_plots()
+    build_plots()
 
-def fill_plots():
+def build_plots():
     result = widgets['result'].value
     for scenario in scenarios:
-        fill_plot(scenario, result)
+        build_plot(scenario, result)
     build_combined_chart(result)
 
-def fill_plot(scenario, result):
+def build_plot(scenario, result):
     df_base = data_obj[result]['scenarios'][scenario]['dataframe']
     if type(df_base) is int:
         df_base = get_dataframe(scenario, result)
         data_obj[result]['scenarios'][scenario]['dataframe'] = df_base
     df = filter_dataframe(df_base)
     if widgets['charttype'].value == 'Stacked Area':
-        fill_stacked_areas(df, scenario)
+        build_stacked_area_chart(df, scenario)
 
 def build_combined_chart(result):
     df_base = data_obj[result]['combined']['dataframe']
@@ -139,10 +139,10 @@ def build_combined_chart(result):
     df = filter_dataframe(df_base, combined=True)
     build_combined_line_chart(df)
 
-def fill_stacked_areas(df, scenario):
+def build_stacked_area_chart(df, scenario):
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
     y_values = stack_lists(df.transpose().values.tolist())
-    get_axis_ranges(scenario, x_values, y_values)
+    save_axis_ranges(scenario, x_values, y_values)
     plot = plot_list['scenarios'][scenario]
     for j, series_name in enumerate(df.columns.values.tolist()):
         if j < len(plot['series']):
@@ -168,7 +168,7 @@ def build_combined_line_chart(df):
     plot['figure'].y_range.start = min([min(a) for a in y_values]+[0])
     plot['figure'].y_range.end = max([max(a) for a in y_values])
 
-def get_axis_ranges(scenario, x_values, y_values):
+def save_axis_ranges(scenario, x_values, y_values):
     plot = plot_list['scenarios'][scenario]
     plot['x_min'] = min(x_values)
     plot['x_max'] = max(x_values)
@@ -258,7 +258,7 @@ def scale_axes_independently():
         plot['figure'].y_range.end = plot['y_max']
 
 def general_filter_update(attrname, old, new):
-    fill_plots()
+    build_plots()
 
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
@@ -269,7 +269,7 @@ def scale_axes(new):
     elif new == 1: scale_axes_independently()
 
 def rerender():
-    fill_plots()
+    build_plots()
     scale_axes(widgets['scale_axes'].active)
 
 widgets['scenarios'].on_change('active', general_filter_update)
