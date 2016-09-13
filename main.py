@@ -163,7 +163,10 @@ def build_combined_line_chart(df):
     plot = plot_list['combined']
     for j, series_name in enumerate(df.columns.values.tolist()):
         if j < len(plot['series']):
-            plot['series'][j].data_source.data['y'] = y_values[j]
+            if j in widgets['scenarios'].active:
+                plot['series'][j].data_source.data['y'] = y_values[j]
+            else:
+                plot['series'][j].data_source.data['y'] = [0]*len(y_values[j])
         else:
             plot['series'].append(plot['figure'].line(x_values, y_values[j], alpha = 0.8, color = scenario_colors[j], line_width = 2, name = series_name))
     plot['figure'].x_range.start = min(x_values)
@@ -275,6 +278,7 @@ def rerender():
     fill_plots()
     scale_axes(widgets['scale_axes'].active)
 
+widgets['scenarios'].on_change('active', general_filter_update)
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
