@@ -111,24 +111,6 @@ def fill_plots():
     for scenario in scenarios:
         fill_plot(scenario)
 
-def sync_axes():
-    x_min = min([a['x_min'] for a in plot_list])
-    x_max = max([a['x_max'] for a in plot_list])
-    y_min = min([a['y_min'] for a in plot_list])
-    y_max = max([a['y_max'] for a in plot_list])
-    for plot in plot_list:
-        plot['figure'].x_range.start = x_min
-        plot['figure'].x_range.end = x_max
-        plot['figure'].y_range.start = y_min
-        plot['figure'].y_range.end = y_max
-
-def scale_axes_independently():
-    for plot in plot_list:
-        plot['figure'].x_range.start = plot['x_min']
-        plot['figure'].x_range.end = plot['x_max']
-        plot['figure'].y_range.start = plot['y_min']
-        plot['figure'].y_range.end = plot['y_max']
-
 def fill_plot(scenario):
     result = widgets['result'].value
     df_base = data_obj[result][scenario]['dataframe']
@@ -206,6 +188,24 @@ def filter_dataframe(df_base):
     df = df.pivot(index=widgets['xaxis'].value, columns=widgets['series'].value, values='value')
     df = df[display_techs.keys()]
     return df
+
+def sync_axes():
+    x_min = min([a['x_min'] for a in plot_list])
+    x_max = max([a['x_max'] for a in plot_list])
+    y_min = min([a['y_min'] for a in plot_list])
+    y_max = max([a['y_max'] for a in plot_list])
+    for plot in plot_list:
+        plot['figure'].x_range.start = x_min
+        plot['figure'].x_range.end = x_max
+        plot['figure'].y_range.start = y_min
+        plot['figure'].y_range.end = y_max
+
+def scale_axes_independently():
+    for plot in plot_list:
+        plot['figure'].x_range.start = plot['x_min']
+        plot['figure'].x_range.end = plot['x_max']
+        plot['figure'].y_range.start = plot['y_min']
+        plot['figure'].y_range.end = plot['y_max']
 
 def general_filter_update(attrname, old, new):
     fill_plots()
