@@ -81,7 +81,7 @@ widgets = col.OrderedDict((
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
-    ('rescale', bmw.Button(label='Sync Axes', button_type='success')),
+    ('scale_axes', bmw.RadioButtonGroup(labels=["Sync Axes", "Scale Independently"])),
 ))
 
 def initialize():
@@ -111,17 +111,23 @@ def fill_plots():
     for scenario in scenarios:
         fill_plot(scenario)
 
-def rescale_plots():
+def sync_axes():
     x_min = min([a['x_min'] for a in plot_list])
     x_max = max([a['x_max'] for a in plot_list])
     y_min = min([a['y_min'] for a in plot_list])
     y_max = max([a['y_max'] for a in plot_list])
-
     for plot in plot_list:
         plot['figure'].x_range.start = x_min
         plot['figure'].x_range.end = x_max
         plot['figure'].y_range.start = y_min
         plot['figure'].y_range.end = y_max
+
+def scale_axes_independently():
+    for plot in plot_list:
+        plot['figure'].x_range.start = plot['x_min']
+        plot['figure'].x_range.end = plot['x_max']
+        plot['figure'].y_range.start = plot['y_min']
+        plot['figure'].y_range.end = plot['y_max']
 
 def fill_plot(scenario):
     result = widgets['result'].value
@@ -203,18 +209,20 @@ def filter_dataframe(df_base):
 
 def general_filter_update(attrname, old, new):
     fill_plots()
+    widgets['scale_axes'].active = None
 
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
 
-def rescale():
-    rescale_plots()
+def scale_axes(new):
+    if new == 0: sync_axes()
+    elif new == 1: scale_axes_independently()
 
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
-widgets['rescale'].on_click(rescale)
+widgets['scale_axes'].on_click(scale_axes)
 
 initialize()
 plots = [p['figure'] for p in plot_list]
