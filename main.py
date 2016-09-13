@@ -141,22 +141,22 @@ def fill_plot(scenario):
 
 def fill_stacked_areas(df, scenario):
     i = scenarios.index(scenario)
-    x_values = np.hstack((df.index, df.index[::-1]))
+    x_values = np.hstack((df.index, df.index[::-1])).tolist()
     y_values = stack_lists(df.transpose().values.tolist())
-    x_min = np.amin(x_values)
-    x_max = np.amax(x_values)
-    y_min = 0
-    y_max = 0
+    get_axis_ranges(scenario, x_values, y_values)
+
     for j, series_name in enumerate(df.columns.values.tolist()):
         if j < len(plot_list[i]['series']):
             plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
         else:
             plot_list[i]['series'].append(plot_list[i]['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
-        if max(y_values[j]) > y_max: y_max = max(y_values[j])
-    plot_list[i]['x_min'] = x_min
-    plot_list[i]['x_max'] = x_max
-    plot_list[i]['y_min'] = y_min
-    plot_list[i]['y_max'] = y_max
+
+def get_axis_ranges(scenario, x_values, y_values):
+    i = scenarios.index(scenario)
+    plot_list[i]['x_min'] = min(x_values)
+    plot_list[i]['x_max'] = max(x_values)
+    plot_list[i]['y_min'] = min([min(a) for a in y_values])
+    plot_list[i]['y_max'] = max([max(a) for a in y_values])
 
 
 def get_dataframe(scenario, result_type):
