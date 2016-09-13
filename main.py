@@ -61,10 +61,14 @@ colors = colors*10
 data_obj = {}
 for result in gdx_structure.keys():
     data_obj[result] = {}
+    data_obj[result]['scenarios'] = {}
+    data_obj[result]['combined'] = {'dataframe': 0}
     for scenario in scenarios:
-        data_obj[result][scenario] = {'dataframe': 0}
+        data_obj[result]['scenarios'][scenario] = {'dataframe': 0}
 
-plot_list = []
+plot_list = col.OrderedDict()
+plot_list['scenarios'] = col.OrderedDict()
+plot_list['combined'] = {}
 
 widgets = col.OrderedDict((
     ('scenarios_heading', bmw.Div(text='Select Scenarios', id='scenarios_heading')),
@@ -90,7 +94,7 @@ def initialize():
         df_base = get_dataframe(scenario_name, result)
 
         #save data
-        data_obj[result][scenario_name]['dataframe'] = df_base
+        data_obj[result]['scenarios'][scenario_name]['dataframe'] = df_base
 
         #build plots
         plot = {
@@ -104,7 +108,7 @@ def initialize():
         plot['figure'].title.text = scenario_name
         plot['figure'].xaxis.major_label_orientation = 'vertical'
         plot['figure'].xaxis.major_label_standoff = 25
-        plot_list.append(plot)
+        plot_list['scenarios'][scenario_name] = plot
     fill_plots()
 
 def fill_plots():
@@ -113,32 +117,31 @@ def fill_plots():
 
 def fill_plot(scenario):
     result = widgets['result'].value
-    df_base = data_obj[result][scenario]['dataframe']
+    df_base = data_obj[result]['scenarios'][scenario]['dataframe']
     if type(df_base) is int:
         df_base = get_dataframe(scenario, result)
-        data_obj[result][scenario]['dataframe'] = df_base
+        data_obj[result]['scenarios'][scenario]['dataframe'] = df_base
     df = filter_dataframe(df_base)
     if widgets['charttype'].value == 'Stacked Area':
         fill_stacked_areas(df, scenario)
 
 def fill_stacked_areas(df, scenario):
-    i = scenarios.index(scenario)
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
     y_values = stack_lists(df.transpose().values.tolist())
     get_axis_ranges(scenario, x_values, y_values)
-
+    plot = plot_list['scenarios'][scenario]
     for j, series_name in enumerate(df.columns.values.tolist()):
-        if j < len(plot_list[i]['series']):
-            plot_list[i]['series'][j].data_source.data['y'] = y_values[j]
+        if j < len(plot['series']):
+            plot['series'][j].data_source.data['y'] = y_values[j]
         else:
-            plot_list[i]['series'].append(plot_list[i]['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
+            plot['series'].append(plot['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
 
 def get_axis_ranges(scenario, x_values, y_values):
-    i = scenarios.index(scenario)
-    plot_list[i]['x_min'] = min(x_values)
-    plot_list[i]['x_max'] = max(x_values)
-    plot_list[i]['y_min'] = min([min(a) for a in y_values])
-    plot_list[i]['y_max'] = max([max(a) for a in y_values])
+    plot = plot_list['scenarios'][scenario]
+    plot['x_min'] = min(x_values)
+    plot['x_max'] = max(x_values)
+    plot['y_min'] = min([min(a) for a in y_values])
+    plot['y_max'] = max([max(a) for a in y_values])
 
 
 def get_dataframe(scenario, result_type):
@@ -190,18 +193,19 @@ def filter_dataframe(df_base):
     return df
 
 def sync_axes():
-    x_min = min([a['x_min'] for a in plot_list])
-    x_max = max([a['x_max'] for a in plot_list])
-    y_min = min([a['y_min'] for a in plot_list])
-    y_max = max([a['y_max'] for a in plot_list])
-    for plot in plot_list:
+    scenario_plots = plot_list['scenarios'].values()
+    x_min = min([a['x_min'] for a in scenario_plots])
+    x_max = max([a['x_max'] for a in scenario_plots])
+    y_min = min([a['y_min'] for a in scenario_plots])
+    y_max = max([a['y_max'] for a in scenario_plots])
+    for plot in scenario_plots:
         plot['figure'].x_range.start = x_min
         plot['figure'].x_range.end = x_max
         plot['figure'].y_range.start = y_min
         plot['figure'].y_range.end = y_max
 
 def scale_axes_independently():
-    for plot in plot_list:
+    for plot in plot_list['scenarios'].values():
         plot['figure'].x_range.start = plot['x_min']
         plot['figure'].x_range.end = plot['x_max']
         plot['figure'].y_range.start = plot['y_min']
@@ -225,7 +229,7 @@ widgets['regtype'].on_change('value', update_regtype)
 widgets['scale_axes'].on_click(scale_axes)
 
 initialize()
-plots = [p['figure'] for p in plot_list]
+plots = [p['figure'] for p in plot_list['scenarios'].values()]
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
 plots_display = bl.column(plots, width=1000, id='plots_section')
 bio.curdoc().add_root(bl.row([filters, plots_display]))
