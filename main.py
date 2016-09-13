@@ -91,12 +91,6 @@ widgets = col.OrderedDict((
 
 def initialize():
     for scenario_name in scenarios:
-        result = widgets['result'].value
-        df_base = get_dataframe(scenario_name, result)
-
-        #save data
-        data_obj[result]['scenarios'][scenario_name]['dataframe'] = df_base
-
         #build plots
         plot = {
             'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
