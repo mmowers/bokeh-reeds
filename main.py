@@ -93,7 +93,8 @@ widgets = col.OrderedDict((
     ('filters_heading', bmw.Div(text='Filters', id='filters_heading')),
     ('scenarios_heading', bmw.Div(text='Scenarios', id='scenarios_heading')),
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
-    ('tech', bmw.Select(value='All techs', options=['All techs']+techs_reversed, id='tech')),
+    ('techs_heading', bmw.Div(text='Techs', id='techs_heading')),
+    ('techs', bmw.CheckboxGroup(labels=display_techs.keys(), active=range(len(display_techs.keys())), id='techs')),
     ('regtype', bmw.Select(value='country', options=hierarchy_column_names, id='regtype')),
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
@@ -137,7 +138,7 @@ def build_plots():
 
 def build_plot(scenario, result):
     df_base = data_obj[result]['scenarios'][scenario]['dataframe']
-    if type(df_base) is int:
+    if isinstance(df_base, int):
         df_base = get_dataframe(scenario, result)
         data_obj[result]['scenarios'][scenario]['dataframe'] = df_base
     df = filter_dataframe(df_base)
@@ -146,7 +147,7 @@ def build_plot(scenario, result):
 
 def build_combined_chart(result):
     df_base = data_obj[result]['combined']['dataframe']
-    if type(df_base) is int:
+    if isinstance(df_base, int):
         df_base = get_combined_dataframe(result)
         data_obj[result]['combined']['dataframe'] = df_base
     df = filter_dataframe(df_base, combined=True)
@@ -154,20 +155,33 @@ def build_combined_chart(result):
 
 def build_stacked_area_chart(df, scenario, result):
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
-    y_values = stack_lists(df.transpose().values.tolist())
-    save_axis_ranges(scenario, x_values, y_values)
+    y_all = df.transpose().values.tolist()
     if 'series_colors' in gdx_structure[result]:
-        colors = gdx_structure[result]['series_colors']
+        colors_all = gdx_structure[result]['series_colors']
     else:
-        colors = ['#3288bd']*len(y_values)
+        colors_all = ['#3288bd']*len(y_all)
+    if 'series' in gdx_structure[result] and gdx_structure[result]['series'] == 'tech':
+        active_techs = widgets['techs'].active
+        y_filtered = []
+        colors = []
+        for i, y in enumerate(y_all):
+            if i in active_techs:
+                y_filtered.append(y)
+                colors.append(colors_all[i])
+        y_values = stack_lists(y_filtered)
+    else:
+        y_values = stack_lists(y_all)
+        colors = colors_all
+    save_axis_ranges(scenario, x_values, y_values)
     plot = plot_list['scenarios'][scenario]
     for plot_series in plot['series']:
         plot_series.glyph.visible = False
     for j in range(len(y_values)):
         if j < len(plot['series']):
             plot['series'][j].data_source.data['y'] = y_values[j]
+            plot['series'][j].glyph.fill_color = colors[j]
         else:
-            plot['series'].append(plot['figure'].patch(x_values, y_values[j], alpha = 0.8, color = colors[j], line_color = None, line_width = None))
+            plot['series'].append(plot['figure'].patch(x_values, y_values[j], alpha = 0.8, fill_color = colors[j], line_color = None, line_width = None))
         plot['series'][j].glyph.visible = True
 
 def build_combined_line_chart(df):
@@ -265,10 +279,12 @@ def filter_dataframe(df_base, combined=False):
             df = df.pivot(index=gdx_result['xaxis'], columns=gdx_result['series'], values='value')
             df = df[gdx_result['series_keys']] #to order the columns properly
         else:
-            df = df.groupby([gdx_result['xaxis']], sort=False)['value'].sum().to_frame()
+            df = df.groupby([gdx_result['xaxis']], sort=False)['value'].sum()
     else:
         df = df.groupby(['scenario', gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
         df = df.pivot(index=gdx_result['xaxis'], columns='scenario', values='value')
+    if not isinstance(df, pd.DataFrame):
+        df = df.to_frame()
     return df
 
 def sync_axes():
@@ -306,6 +322,7 @@ def rerender():
     scale_axes(widgets['scale_axes'].active)
 
 widgets['scenarios'].on_change('active', general_filter_update)
+widgets['techs'].on_change('active', general_filter_update)
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)

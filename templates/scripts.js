@@ -2,6 +2,9 @@ $(document).ready(function(){
     $('body').on('click', '#modelid_scenarios_heading', function(){
         $('#modelid_scenarios').toggle();
     });
+    $('body').on('click', '#modelid_techs_heading', function(){
+        $('#modelid_techs').toggle();
+    });
     $('body').on('click', '.legend-header', function(){
         $(this).next('.legend-body').toggle();
     });

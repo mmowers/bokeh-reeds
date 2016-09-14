@@ -5,6 +5,7 @@
     font-weight: bold;
 }
 #modelid_scenarios_heading,
+#modelid_techs_heading,
 .legend-header{
     color: blue;
     cursor: pointer;
@@ -26,7 +27,8 @@
     margin: 0;
 }
 
-#modelid_scenarios{
+#modelid_scenarios,
+#modelid_techs{
     display:none;
 }
 .legend-body{
