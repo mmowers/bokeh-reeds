@@ -11,13 +11,9 @@ import bokeh.models as bm
 import bokeh.models.widgets as bmw
 
 #set globals
-gdx_structure = col.OrderedDict((
-    ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n'}),
-    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n'}),
-))
-
 runs_path = 'C:\\Users\\mmowers\\Bokeh\\runs\\'
 scenarios = os.walk(runs_path).next()[1]
+scenario_colors = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
 
 regions_full = {
     'n': ['p'+str(i) for i in range(1,136)],
@@ -38,6 +34,7 @@ display_techs = col.OrderedDict((
     ('Dedicated Bio', {'techs': ['biopower',], 'color': '#9e0142'}),
     ('Other Renew', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs', 'cofirebiomass', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave',], 'color': '#5e4fa2'}),
 ))
+display_techs_colors = [display_techs[key]['color'] for key in display_techs]
 tech_map = {}
 for name in display_techs:
     for raw_tech in display_techs[name]['techs']:
@@ -52,7 +49,11 @@ hierarchy = copy.deepcopy(hierarchy_input)
 hierarchy_column_names = ['i','n','r','rnew','rto','censusregions','st','in','country','custreg','readin']
 hierarchy.columns = hierarchy_column_names
 
-scenario_colors = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
+gdx_structure = col.OrderedDict((
+    ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
+    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
+    ('CO2 (Million Tonnes)', {'file': 'Reporting.gdx', 'param': 'AnnualReport', 'columns': ['n', 'year', 'type','value'], 'unit': 'Million tonnes', 'mult': 0.000001, 'reg': 'n', 'filters': {'type': 'CO2'}, 'xaxis': 'year'}),
+))
 
 data_obj = {}
 for result in gdx_structure.keys():
@@ -73,7 +74,6 @@ for i, scenario in enumerate(scenarios):
 scenario_legend_string += '</div>'
 
 tech_legend_string = '<div class="legend-header">Techs</div><div class="legend-body">'
-
 techs_reversed = display_techs.keys()
 techs_reversed.reverse()
 for tech in techs_reversed:
@@ -90,8 +90,6 @@ widgets = col.OrderedDict((
     ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
     ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
     ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
-    ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
-    ('series', bmw.Select(title='Series: ', value='tech', options=['tech', 'year'], id='series')),
     ('filters_heading', bmw.Div(text='Filters', id='filters_heading')),
     ('scenarios_heading', bmw.Div(text='Scenarios', id='scenarios_heading')),
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
@@ -144,7 +142,7 @@ def build_plot(scenario, result):
         data_obj[result]['scenarios'][scenario]['dataframe'] = df_base
     df = filter_dataframe(df_base)
     if widgets['charttype'].value == 'Stacked Area':
-        build_stacked_area_chart(df, scenario)
+        build_stacked_area_chart(df, scenario, result)
 
 def build_combined_chart(result):
     df_base = data_obj[result]['combined']['dataframe']
@@ -154,33 +152,44 @@ def build_combined_chart(result):
     df = filter_dataframe(df_base, combined=True)
     build_combined_line_chart(df)
 
-def build_stacked_area_chart(df, scenario):
+def build_stacked_area_chart(df, scenario, result):
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
     y_values = stack_lists(df.transpose().values.tolist())
     save_axis_ranges(scenario, x_values, y_values)
+    if 'series_colors' in gdx_structure[result]:
+        colors = gdx_structure[result]['series_colors']
+    else:
+        colors = ['#3288bd']*len(y_values)
     plot = plot_list['scenarios'][scenario]
-    for j, series_name in enumerate(df.columns.values.tolist()):
+    for plot_series in plot['series']:
+        plot_series.glyph.visible = False
+    for j in range(len(y_values)):
         if j < len(plot['series']):
             plot['series'][j].data_source.data['y'] = y_values[j]
         else:
-            plot['series'].append(plot['figure'].patch(x_values, y_values[j], alpha = 0.8, color = display_techs[series_name]['color'], line_color = None, line_width = None, name = series_name))
+            plot['series'].append(plot['figure'].patch(x_values, y_values[j], alpha = 0.8, color = colors[j], line_color = None, line_width = None))
+        plot['series'][j].glyph.visible = True
 
 def build_combined_line_chart(df):
     x_values = df.index.tolist()
     y_values = df.transpose().values.tolist()
 
+    y_shown = []
     plot = plot_list['combined']
-    for j, series_name in enumerate(df.columns.values.tolist()):
-        if j not in widgets['scenarios'].active:
-            y_values[j] = [0]*len(y_values[j])
+    for j in range(len(y_values)):
         if j < len(plot['series']):
             plot['series'][j].data_source.data['y'] = y_values[j]
         else:
-            plot['series'].append(plot['figure'].line(x_values, y_values[j], alpha = 0.8, color = scenario_colors[j], line_width = 2, name = series_name))
+            plot['series'].append(plot['figure'].line(x_values, y_values[j], alpha = 0.8, color = scenario_colors[j], line_width = 2))
+        if j in widgets['scenarios'].active:
+            y_shown.append(y_values[j])
+            plot['series'][j].glyph.visible = True
+        else:
+            plot['series'][j].glyph.visible = False
     plot['figure'].x_range.start = min(x_values)
     plot['figure'].x_range.end = max(x_values)
-    plot['figure'].y_range.start = min([min(a) for a in y_values]+[0])
-    plot['figure'].y_range.end = max([max(a) for a in y_values])
+    plot['figure'].y_range.start = min([min(a) for a in y_shown]+[0])
+    plot['figure'].y_range.end = max([max(a) for a in y_shown])
 
 def save_axis_ranges(scenario, x_values, y_values):
     plot = plot_list['scenarios'][scenario]
@@ -194,6 +203,10 @@ def get_dataframe(scenario, result):
     gdx_result = gdx_structure[result]
     df = gdxpds.to_dataframe(runs_path + scenario + '\\gdxfiles\\' + gdx_result['file'], gdx_result['param'])[gdx_result['param']]
     df.columns = gdx_result['columns']
+    if 'filters' in gdx_result:
+        for key in gdx_result['filters']:
+            df = df[df[key].isin([gdx_result['filters'][key]])]
+            df = df.drop(key, 1)
     multi_index_iterables = []
     multi_index_names = []
     if 'tech' in df.columns:
@@ -212,7 +225,10 @@ def get_dataframe(scenario, result):
     if 'value' in df.columns:
         df['value'] = df['value']* gdx_result['mult']
     
+    #sum over duplicates of the desired index (e.g. from techs that are grouped into one)
     df = df.groupby(multi_index_names, as_index=False, sort=False)['value'].sum()
+
+    #now to fill up the missing values with 0:
     df_index = pd.MultiIndex.from_product(multi_index_iterables, names=multi_index_names)
     df = df.set_index(multi_index_names).reindex(df_index).reset_index()
     df = df.fillna(0)
@@ -244,12 +260,15 @@ def filter_dataframe(df_base, combined=False):
     df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
     df = df[df[widgets['regtype'].value].isin([widgets['region'].value])]
     if not combined:
-        df = df.groupby([widgets['series'].value, widgets['xaxis'].value], as_index=False, sort=False)['value'].sum()
-        df = df.pivot(index=widgets['xaxis'].value, columns=widgets['series'].value, values='value')
-        df = df[display_techs.keys()]
+        if 'series' in gdx_result:
+            df = df.groupby([gdx_result['series'], gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
+            df = df.pivot(index=gdx_result['xaxis'], columns=gdx_result['series'], values='value')
+            df = df[gdx_result['series_keys']] #to order the columns properly
+        else:
+            df = df.groupby([gdx_result['xaxis']], sort=False)['value'].sum().to_frame()
     else:
-        df = df.groupby(['scenario', widgets['xaxis'].value], as_index=False, sort=False)['value'].sum()
-        df = df.pivot(index=widgets['xaxis'].value, columns='scenario', values='value')
+        df = df.groupby(['scenario', gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
+        df = df.pivot(index=gdx_result['xaxis'], columns='scenario', values='value')
     return df
 
 def sync_axes():
