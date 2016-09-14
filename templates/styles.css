@@ -4,12 +4,15 @@
 .bk-markup{
     font-weight: bold;
 }
-#modelid_scenarios_heading{
+#modelid_scenarios_heading,
+.legend-header{
     color: blue;
     cursor: pointer;
 }
-#modelid_filters_heading{
-    margin-top: 30px;
+#modelid_filters_heading,
+#modelid_show_heading,
+#modelid_scale_axes{
+    margin-top: 20px;
 }
 .bk-plot-layout{
     display: inline-block;
@@ -17,6 +20,27 @@
 .bk-logo{
     display: none !important;
 }
+
+.bk-root .bk-widget label{
+    display: block;
+    margin: 0;
+}
+
 #modelid_scenarios{
     display:none;
+}
+.legend-body{
+    display: none;
+    border: 1px solid lightgrey;
+    padding: 10px;
+}
+.legend-color{
+    width: 20px;
+    height: 10px;
+    display: inline-block;
+    margin-right: 10px
+}
+
+#modelid_scale_axes{
+    text-align: center;
 }

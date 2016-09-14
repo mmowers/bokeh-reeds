@@ -43,9 +43,6 @@ for name in display_techs:
     for raw_tech in display_techs[name]['techs']:
         tech_map[raw_tech] = name
 
-display_techs_w_color = [name+':'+display_techs[name]['color'] for name in display_techs]
-display_techs_w_color.reverse()
-
 leftovers = ['undisc', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response']
 
 years_full = range(2010, 2052, 2)
@@ -56,7 +53,6 @@ hierarchy_column_names = ['i','n','r','rnew','rto','censusregions','st','in','co
 hierarchy.columns = hierarchy_column_names
 
 scenario_colors = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
-
 
 data_obj = {}
 for result in gdx_structure.keys():
@@ -70,23 +66,42 @@ plot_list = col.OrderedDict()
 plot_list['scenarios'] = col.OrderedDict()
 plot_list['combined'] = {}
 
+scenario_legend_string = '<div class="legend-header">Scenarios</div><div class="legend-body">'
+for i, scenario in enumerate(scenarios):
+    scenario_legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + scenario_colors[i] + ';"></span>'
+    scenario_legend_string += '<span class="legend-text">' + scenario + '</span></div>'
+scenario_legend_string += '</div>'
+
+tech_legend_string = '<div class="legend-header">Techs</div><div class="legend-body">'
+
+techs_reversed = display_techs.keys()
+techs_reversed.reverse()
+for tech in techs_reversed:
+    tech_legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + display_techs[tech]['color'] + ';"></span>'
+    tech_legend_string += '<span class="legend-text">' + tech + '</span></div>'
+tech_legend_string += '</div>'
+
 widgets = col.OrderedDict((
-    ('scenarios_heading', bmw.Div(text='Select Scenarios', id='scenarios_heading')),
-    ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
+    ('legends_heading', bmw.Div(text='Legends', id='legends_heading')),
+    ('techs_legend', bmw.Div(text=tech_legend_string, id='techs_legend')),
+    ('scenarios_legend', bmw.Div(text=scenario_legend_string, id='scenarios_legend')),
+    ('show_heading', bmw.Div(text='Show', id='show_heading')),
     ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'], id='scenarios_compare')),
     ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
     ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
     ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
     ('xaxis', bmw.Select(title='X-axis: ', value='year', options=['year', 'tech'], id='xaxis')),
     ('series', bmw.Select(title='Series: ', value='tech', options=['tech', 'year'], id='series')),
-    ('filters_heading', bmw.Div(text='Select Filters:', id='filters_heading')),
-    ('tech', bmw.Select(value='All techs', options=['All techs']+display_techs_w_color, id='tech')),
+    ('filters_heading', bmw.Div(text='Filters', id='filters_heading')),
+    ('scenarios_heading', bmw.Div(text='Scenarios', id='scenarios_heading')),
+    ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
+    ('tech', bmw.Select(value='All techs', options=['All techs']+techs_reversed, id='tech')),
     ('regtype', bmw.Select(value='country', options=hierarchy_column_names, id='regtype')),
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
-    ('scale_axes', bmw.RadioButtonGroup(labels=['Sync Axes', 'Scale Independently'])),
-    ('rerender', bmw.Button(label='Re-render', button_type='success')),
+    ('scale_axes', bmw.RadioButtonGroup(labels=['Sync Axes', 'Scale Independently'], id='scale_axes')),
+    ('rerender', bmw.Button(label='Re-render', button_type='success', id='rerender')),
 ))
 
 def initialize():
