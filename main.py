@@ -31,8 +31,8 @@ display_techs = col.OrderedDict((
     ('Hydro', {'techs': ['hydro',], 'color': '#fdae61'}),
     ('Wind', {'techs': ['wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd',], 'color': '#f46d43'}),
     ('Solar', {'techs': ['distpv',  'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv',], 'color': '#d53e4f'}),
-    ('Dedicated Bio', {'techs': ['biopower',], 'color': '#9e0142'}),
-    ('Other Renew', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs', 'cofirebiomass', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave',], 'color': '#5e4fa2'}),
+    ('Biomass', {'techs': ['biopower', 'cofirebiomass', 'lfill-gas',], 'color': '#9e0142'}),
+    ('Geothermal', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs',], 'color': '#5e4fa2'}),
 ))
 display_techs_colors = [display_techs[key]['color'] for key in display_techs]
 tech_map = {}
@@ -40,7 +40,7 @@ for name in display_techs:
     for raw_tech in display_techs[name]['techs']:
         tech_map[raw_tech] = name
 
-leftovers = ['undisc', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response']
+leftovers = ['undisc', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'ocean', 'current', 'wave', 'mhkwave',]
 
 years_full = range(2010, 2052, 2)
 
