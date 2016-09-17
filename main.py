@@ -13,8 +13,7 @@ import bokeh.models.widgets as bmw
 #set globals
 runs_path = 'C:\\Users\\mmowers\\Bokeh\\runs\\'
 scenarios = os.walk(runs_path).next()[1]
-scenario_colors = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
-
+scenario_colors = 5*['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
 regions_full = {
     'n': ['p'+str(i) for i in range(1,136)],
 }
