@@ -48,11 +48,76 @@ hierarchy = copy.deepcopy(hierarchy_input)
 hierarchy_column_names = ['i','n','r','rnew','rto','censusregions','st','in','country','custreg','readin']
 hierarchy.columns = hierarchy_column_names
 
+# tech_map_input = pd.read_csv('tech_map.csv', header=None)
+# tech_map = copy.deepcopy(tech_map_input)
+# tech_map_column_names = ['tech', 'grouped_tech']
+# tech_map.columns = tech_map_column_names
+
 gdx_structure = col.OrderedDict((
-    ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
-    ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
-    ('CO2 (Million Tonnes)', {'file': 'Reporting.gdx', 'param': 'AnnualReport', 'columns': ['n', 'year', 'type','value'], 'unit': 'Million tonnes', 'mult': 0.000001, 'reg': 'n', 'filters': {'type': 'CO2'}, 'xaxis': 'year'}),
+    ('Capacity (GW)',
+        {'file': 'CONVqn.gdx',
+        'param': 'CONVqnallyears',
+        'columns': ['tech', 'n', 'year', 'value'],
+        'reg': 'n',
+        'default_xaxis': 'year',
+        'default_series': 'tech',
+        'default_yaxis': 'value',
+        'default_aggregation': 'sum',
+        'mult': 0.001,
+        'unit': 'GW',
+        'default_chart_type': 'stacked_area',
+        'xaxis': 'year',
+        'series': 'tech',
+        'series_keys': display_techs.keys(),
+        'series_colors': display_techs_colors}),
+    ('Generation (TWh)',
+        {'file': 'CONVqn.gdx',
+        'param': 'CONVqmnallyears',
+        'columns': ['tech', 'n', 'year', 'value'],
+        'unit': 'TWh',
+        'mult': 0.000001,
+        'reg': 'n',
+        'xaxis': 'year',
+        'series': 'tech',
+        'series_keys': display_techs.keys(),
+        'series_colors': display_techs_colors}),
+    ('CO2 (Million Tonnes)',
+        {'file': 'Reporting.gdx',
+        'param': 'AnnualReport',
+        'columns': ['n', 'year', 'type','value'],
+        'unit': 'Million tonnes',
+        'mult': 0.000001,
+        'reg': 'n',
+        'filters': {'type': 'CO2'},
+        'xaxis': 'year'}),
 ))
+column_metadata = {
+    'tech':{
+        'type': 'string',
+        'filter': 'single',
+        'full_set': techs_full,
+        'colors': display_techs_colors,
+        'options': ['series'],
+        'merge': tech_map,
+    },
+    'type':{
+        'type': 'string',
+        'full_set': ['CO2'],
+        'grouping': display_techs,
+        'colors': display_techs_colors,
+    },
+    'n':{
+        'type': 'string',
+        'full_set': regions_full['n'],
+    },
+    'year':{
+        'type': 'number',
+        'full_set': years_full,
+    },
+    'value':{
+        'type': 'number',
+    },
+}
 
 data_obj = {}
 for result in gdx_structure.keys():
