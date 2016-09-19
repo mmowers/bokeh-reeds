@@ -33,7 +33,7 @@ display_techs = col.OrderedDict((
     ('Biomass', {'techs': ['biopower', 'cofirebiomass', 'lfill-gas',], 'color': '#9e0142'}),
     ('Geothermal', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs',], 'color': '#5e4fa2'}),
 ))
-display_techs_colors = [display_techs[key]['color'] for key in display_techs]
+display_techs_colors = {k:v['color'] for k,v in display_techs.iteritems()}
 tech_map = {}
 for name in display_techs:
     for raw_tech in display_techs[name]['techs']:
@@ -154,24 +154,13 @@ def build_combined_chart(result):
 
 def build_stacked_area_chart(df, scenario, result):
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
-    y_all = df.transpose().values.tolist()
-    if 'series_colors' in gdx_structure[result]:
-        colors_all = gdx_structure[result]['series_colors']
-    else:
-        colors_all = ['#3288bd']*len(y_all)
-    if 'series' in gdx_structure[result] and gdx_structure[result]['series'] == 'tech':
-        active_techs = widgets['techs'].active
-        y_filtered = []
-        colors = []
-        for i, y in enumerate(y_all):
-            if i in active_techs:
-                y_filtered.append(y)
-                colors.append(colors_all[i])
-        y_values = stack_lists(y_filtered)
-    else:
-        y_values = stack_lists(y_all)
-        colors = colors_all
+    y_values = stack_lists(df.transpose().values.tolist())
     save_axis_ranges(scenario, x_values, y_values)
+    if 'series_colors' in gdx_structure[result]:
+        series_color_base = gdx_structure[result]['series_colors']
+        colors = [series_color_base[tech] for tech in df.columns]
+    else:
+        colors = ['#3288bd']*len(y_values)
     plot = plot_list['scenarios'][scenario]
     for plot_series in plot['series']:
         plot_series.glyph.visible = False
@@ -249,11 +238,8 @@ def get_dataframe(scenario, result):
 
 def get_combined_dataframe(result):
     comb_df = pd.DataFrame()
-    gdx_result = gdx_structure[result]
-    grouped_cols = [gdx_result['reg'], 'year']
     for scenario in scenarios:
         df = data_obj[result]['scenarios'][scenario]['dataframe']
-        df = df.groupby(grouped_cols, as_index=False, sort=False)['value'].sum()
         df['scenario'] = scenario
         comb_df = pd.concat([comb_df, df])
     return comb_df
@@ -269,14 +255,21 @@ def stack_lists(raw_lists):
 
 def filter_dataframe(df_base, combined=False):
     gdx_result = gdx_structure[widgets['result'].value]
+    if 'series_keys' in gdx_result: 
+        series_keys = gdx_result['series_keys']
     hier = hierarchy.drop_duplicates(gdx_result['reg'])
     df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
     df = df[df[widgets['regtype'].value].isin([widgets['region'].value])]
+    if 'tech' in gdx_result['columns']:
+        active_techs = [widgets['techs'].labels[i] for i in widgets['techs'].active]
+        df = df[df['tech'].isin(active_techs)]
+        if 'series' in gdx_result and gdx_result['series'] == 'tech':
+            series_keys = [key for key in series_keys if key in active_techs]
     if not combined:
         if 'series' in gdx_result:
             df = df.groupby([gdx_result['series'], gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
             df = df.pivot(index=gdx_result['xaxis'], columns=gdx_result['series'], values='value')
-            df = df[gdx_result['series_keys']] #to order the columns properly
+            df = df[series_keys] #to order the columns properly
         else:
             df = df.groupby([gdx_result['xaxis']], sort=False)['value'].sum()
     else:
