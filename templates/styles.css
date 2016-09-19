@@ -6,6 +6,7 @@
 }
 #modelid_scenarios_heading,
 #modelid_techs_heading,
+#modelid_set_axis_ranges_heading,
 .legend-header{
     color: blue;
     cursor: pointer;
@@ -28,7 +29,11 @@
 }
 
 #modelid_scenarios,
-#modelid_techs{
+#modelid_techs,
+#modelid_set_x_min,
+#modelid_set_x_max,
+#modelid_set_y_min,
+#modelid_set_y_max{
     display:none;
 }
 .legend-body{

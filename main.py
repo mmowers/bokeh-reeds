@@ -89,6 +89,11 @@ widgets = col.OrderedDict((
     ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
     ('format', bmw.Select(value='Chart', options=['Figure','Table','Map'], id='format')),
     ('charttype', bmw.Select(value='Stacked Area', options=['Stacked Area'], id='charttype')),
+    ('set_axis_ranges_heading', bmw.Div(text='Set axis ranges', id='set_axis_ranges_heading')),
+    ('set_x_min', bmw.TextInput(title='x min', value='', id='set_x_min')),
+    ('set_x_max', bmw.TextInput(title='x max', value='', id='set_x_max')),
+    ('set_y_min', bmw.TextInput(title='y min', value='', id='set_y_min')),
+    ('set_y_max', bmw.TextInput(title='y max', value='', id='set_y_max')),
     ('filters_heading', bmw.Div(text='Filters', id='filters_heading')),
     ('scenarios_heading', bmw.Div(text='Scenarios', id='scenarios_heading')),
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
@@ -305,6 +310,26 @@ def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
 
+def update_x_min(attrname, old, new):
+    for plot in plot_list['scenarios'].values():
+        plot['figure'].x_range.start = float(new)
+    plot_list['combined']['figure'].x_range.start = float(new)
+
+def update_x_max(attrname, old, new):
+    for plot in plot_list['scenarios'].values():
+        plot['figure'].x_range.end = float(new)
+    plot_list['combined']['figure'].x_range.end = float(new)
+
+def update_y_min(attrname, old, new):
+    for plot in plot_list['scenarios'].values():
+        plot['figure'].y_range.start = float(new)
+    plot_list['combined']['figure'].y_range.start = float(new)
+
+def update_y_max(attrname, old, new):
+    for plot in plot_list['scenarios'].values():
+        plot['figure'].y_range.end = float(new)
+    plot_list['combined']['figure'].y_range.end = float(new)
+
 def scale_axes(new):
     if new == 0: sync_axes()
     elif new == 1: scale_axes_independently()
@@ -318,6 +343,10 @@ widgets['techs'].on_change('active', general_filter_update)
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
+widgets['set_x_min'].on_change('value', update_x_min)
+widgets['set_x_max'].on_change('value', update_x_max)
+widgets['set_y_min'].on_change('value', update_y_min)
+widgets['set_y_max'].on_change('value', update_y_max)
 widgets['scale_axes'].on_click(scale_axes)
 widgets['rerender'].on_click(rerender)
 
