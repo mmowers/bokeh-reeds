@@ -105,6 +105,7 @@ widgets = col.OrderedDict((
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
     ('scale_axes', bmw.RadioButtonGroup(labels=['Sync Axes', 'Scale Independently'], id='scale_axes')),
     ('rerender', bmw.Button(label='Re-render', button_type='success', id='rerender')),
+    ('download', bmw.Button(label='Download CSV', button_type='success', id='download')),
 ))
 
 def initialize():
@@ -338,6 +339,25 @@ def rerender():
     build_plots()
     scale_axes(widgets['scale_axes'].active)
 
+def download():
+    result = widgets['result'].value
+    df_base = data_obj[result]['combined']['dataframe']
+    gdx_result = gdx_structure[result]
+    hier = hierarchy.drop_duplicates(gdx_result['reg'])
+    df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
+    df = df[df[widgets['regtype'].value].isin([widgets['region'].value])]
+    if 'tech' in gdx_result['columns']:
+        active_techs = [widgets['techs'].labels[i] for i in widgets['techs'].active]
+        df = df[df['tech'].isin(active_techs)]
+    if 'series' in gdx_result:
+        df = df.groupby(['scenario', gdx_result['xaxis'], gdx_result['series']], as_index=False, sort=False)['value'].sum()
+    else:
+        df = df.groupby(['scenario', gdx_result['xaxis']], sort=False)['value'].sum()
+    if not isinstance(df, pd.DataFrame):
+        df = df.to_frame()
+    df.to_csv('../../downloads/out.csv', index=False)
+
+
 widgets['scenarios'].on_change('active', general_filter_update)
 widgets['techs'].on_change('active', general_filter_update)
 widgets['result'].on_change('value', general_filter_update)
@@ -349,6 +369,7 @@ widgets['set_y_min'].on_change('value', update_y_min)
 widgets['set_y_max'].on_change('value', update_y_max)
 widgets['scale_axes'].on_click(scale_axes)
 widgets['rerender'].on_click(rerender)
+widgets['download'].on_click(download)
 
 initialize()
 plots = [p['figure'] for p in plot_list['scenarios'].values()]
