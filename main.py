@@ -11,16 +11,17 @@ import bokeh.models as bm
 import bokeh.models.widgets as bmw
 
 #set globals
-runs_path = 'C:\\Users\\mmowers\\Bokeh\\runs\\'
+runs_path = '\\\\nrelqnap01d\\ReEDS\\FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016\\scenarios\\runs\\'
+
 scenarios = os.walk(runs_path).next()[1]
 scenario_colors = 5*['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
 regions_full = {
     'n': ['p'+str(i) for i in range(1,136)],
 }
-techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
+techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp', 'reqt']
 #techs_full = ['hydro', 'gas-ct', 'gas-cc', 'gas-cc-ccs', 'coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'coal-ccs', 'o-g-s', 'nuclear', 'geothermal', 'undisc', 'nf-egs', 'shallow-egs', 'deep-egs', 'biopower', 'cofirebiomass', 'cofireold', 'cofirenew', 'lfill-gas', 'ocean', 'current', 'wave', 'mhkwave', 'distpv', 'wind', 'wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd', 'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'transmission', 'il', 'canada', 'curtail', 'phev', 'excess', 'reqt', 'cofire-rebate', 'gas-ct-nsp', 'gas-cc-nsp', 'coal-ccs-nsp', 'nuclear-nsp']
 display_techs = col.OrderedDict((
-    ('Conv Coal', {'techs': ['coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc', 'cofireold', 'cofirenew',], 'color': '#5e4fa2'}),
+    ('Conv Coal', {'techs': ['coaloldscr', 'coalolduns', 'coal-new', 'coal-igcc',], 'color': '#5e4fa2'}),
     ('Coal CCS', {'techs': ['coal-ccs','coal-ccs-nsp'], 'color': '#3288bd'}),
     ('Gas CC', {'techs': ['gas-cc','gas-cc-nsp'], 'color': '#66c2a5'}),
     ('Gas CCS', {'techs': ['gas-cc-ccs',], 'color': '#abdda4'}),
@@ -28,10 +29,16 @@ display_techs = col.OrderedDict((
     ('Comb Turbines', {'techs': ['gas-ct','gas-ct-nsp'], 'color': '#ffffbf'}),
     ('Nuclear', {'techs': ['nuclear','nuclear-nsp'], 'color': '#fee08b'}),
     ('Hydro', {'techs': ['hydro',], 'color': '#fdae61'}),
-    ('Wind', {'techs': ['wind-ons', 'wind-ofs', 'wind-ofm', 'wind-ofd',], 'color': '#f46d43'}),
-    ('Solar', {'techs': ['distpv',  'solar', 'csp', 'csp-ns', 'csp-ws', 'pv', 'upv', 'dupv',], 'color': '#d53e4f'}),
+    ('Onshore Wind', {'techs': ['wind-ons',], 'color': '#f46d43'}),
+    ('Offshore Wind', {'techs': ['wind-ofs', 'wind-ofm', 'wind-ofd',], 'color': '#f46d43'}),
+    ('UPV', {'techs': ['upv', 'dupv',], 'color': '#d53e4f'}), #capacity needs to be divided by 1.1 to reflect AC capacity.
+    ('distPV', {'techs': ['distpv',], 'color': '#d53e4f'}),
+    ('CSP', {'techs': ['csp', 'csp-ns', 'csp-ws',], 'color': '#d53e4f'}),
     ('Biomass', {'techs': ['biopower', 'cofirebiomass', 'lfill-gas',], 'color': '#9e0142'}),
+    ('Cofire', {'techs': ['cofireold', 'cofirenew',], 'color': '#5e4fa2'}),
     ('Geothermal', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs',], 'color': '#5e4fa2'}),
+    ('Storage', {'techs': ['pumped-hydro', 'battery', 'caes',], 'color': '#5e4fa2'}),
+    ('Bus Bar Load', {'techs': ['reqt',], 'color': '#5e4fa2'}), #
 ))
 display_techs_colors = {k:v['color'] for k,v in display_techs.iteritems()}
 tech_map = {}
@@ -39,7 +46,7 @@ for name in display_techs:
     for raw_tech in display_techs[name]['techs']:
         tech_map[raw_tech] = name
 
-leftovers = ['undisc', 'pumped-hydro', 'battery', 'one-hour-battery', 'caes', 'ice-storage', 'demand-response', 'ocean', 'current', 'wave', 'mhkwave',]
+leftovers = ['undisc', 'one-hour-battery', 'ice-storage', 'demand-response', 'ocean', 'current', 'wave', 'mhkwave', 'solar', 'pv']
 
 years_full = range(2010, 2052, 2)
 
@@ -112,7 +119,7 @@ def initialize():
     for scenario_name in scenarios:
         #build plots
         plot = {
-            'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
+            'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=225),
             'series': [],
             'xmin': 0,
             'xmax': 0,
@@ -125,7 +132,7 @@ def initialize():
         plot_list['scenarios'][scenario_name] = plot
     
     combined_plot = {
-        'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=250),
+        'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=225),
         'series': [],
     }
     combined_plot['figure'].title.text = 'Combined'
@@ -352,7 +359,7 @@ def download():
     if 'series' in gdx_result:
         df = df.groupby(['scenario', gdx_result['xaxis'], gdx_result['series']], as_index=False, sort=False)['value'].sum()
     else:
-        df = df.groupby(['scenario', gdx_result['xaxis']], sort=False)['value'].sum()
+        df = df.groupby(['scenario', gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
     if not isinstance(df, pd.DataFrame):
         df = df.to_frame()
     df.to_csv('../../downloads/out.csv', index=False)
