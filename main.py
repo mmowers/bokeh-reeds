@@ -11,7 +11,8 @@ import bokeh.models as bm
 import bokeh.models.widgets as bmw
 
 #set globals
-runs_path = '\\\\nrelqnap01d\\ReEDS\\FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016\\scenarios\\runs\\'
+# runs_path = 'C:/Users/mmowers/Bokeh/runs_test/'
+runs_path = '//nrelqnap01d/ReEDS/FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016/scenarios/runs/'
 
 scenarios = os.walk(runs_path).next()[1]
 scenario_colors = 5*['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
@@ -37,7 +38,9 @@ display_techs = col.OrderedDict((
     ('Biomass', {'techs': ['biopower', 'cofirebiomass', 'lfill-gas',], 'color': '#9e0142'}),
     ('Cofire', {'techs': ['cofireold', 'cofirenew',], 'color': '#5e4fa2'}),
     ('Geothermal', {'techs': ['geothermal', 'nf-egs', 'shallow-egs', 'deep-egs',], 'color': '#5e4fa2'}),
-    ('Storage', {'techs': ['pumped-hydro', 'battery', 'caes',], 'color': '#5e4fa2'}),
+    ('Pumped-hydro', {'techs': ['pumped-hydro',], 'color': '#5e4fa2'}),
+    ('Battery', {'techs': ['battery',], 'color': '#5e4fa2'}),
+    ('CAES', {'techs': ['caes',], 'color': '#5e4fa2'}),
     ('Bus Bar Load', {'techs': ['reqt',], 'color': '#5e4fa2'}), #
 ))
 display_techs_colors = {k:v['color'] for k,v in display_techs.iteritems()}
@@ -50,10 +53,8 @@ leftovers = ['undisc', 'one-hour-battery', 'ice-storage', 'demand-response', 'oc
 
 years_full = range(2010, 2052, 2)
 
-hierarchy_input = pd.read_csv('hierarchy.csv', header=None)
+hierarchy_input = pd.read_csv('csv/hierarchy.csv')
 hierarchy = copy.deepcopy(hierarchy_input)
-hierarchy_column_names = ['i','n','r','rnew','rto','censusregions','st','in','country','custreg','readin']
-hierarchy.columns = hierarchy_column_names
 
 gdx_structure = col.OrderedDict((
     ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
@@ -106,7 +107,7 @@ widgets = col.OrderedDict((
     ('scenarios', bmw.CheckboxGroup(labels=scenarios, active=range(len(scenarios)), id='scenarios')),
     ('techs_heading', bmw.Div(text='Techs', id='techs_heading')),
     ('techs', bmw.CheckboxGroup(labels=display_techs.keys(), active=range(len(display_techs.keys())), id='techs')),
-    ('regtype', bmw.Select(value='country', options=hierarchy_column_names, id='regtype')),
+    ('regtype', bmw.Select(value='country', options=hierarchy.columns.values.tolist(), id='regtype')),
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
