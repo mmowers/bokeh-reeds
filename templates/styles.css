@@ -51,3 +51,7 @@
 #modelid_scale_axes{
     text-align: center;
 }
+
+.bk-grid-column{
+    height: auto !important;
+}

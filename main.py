@@ -1,4 +1,6 @@
+from __future__ import division
 import os
+import os.path
 import copy
 import collections as col
 import gdxpds
@@ -9,10 +11,12 @@ import bokeh.layouts as bl
 import bokeh.plotting as bp
 import bokeh.models as bm
 import bokeh.models.widgets as bmw
+import bokeh.models.glyphs as bmg
 
 #set globals
-# runs_path = 'C:/Users/mmowers/Bokeh/runs_test/'
-runs_path = '//nrelqnap01d/ReEDS/FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016/scenarios/runs/'
+runs_path = 'C:/Users/mmowers/Bokeh/runs_test/'
+#runs_path = '//nrelqnap01d/ReEDS/FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016/scenarios/runs/'
+#runs_path = '//nrelqnap01d/ReEDS/FY16-MissionInnovation-MRM-019743a-v2016/runs/nuclear 80 yr/runs/'
 
 scenarios = os.walk(runs_path).next()[1]
 scenario_colors = 5*['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
@@ -56,6 +60,14 @@ years_full = range(2010, 2052, 2)
 hierarchy_input = pd.read_csv('csv/hierarchy.csv')
 hierarchy = copy.deepcopy(hierarchy_input)
 
+region_boundaries = {}
+for regtype in hierarchy.columns.values.tolist():
+    filepath = 'csv/gis_' + regtype + '.csv'
+    if os.path.isfile(filepath):
+        region_boundaries[regtype] = pd.read_csv(filepath, sep=',')
+        region_boundaries[regtype]['x'] = region_boundaries[regtype]['long']*53
+        region_boundaries[regtype]['y'] = region_boundaries[regtype]['lat']*69
+
 gdx_structure = col.OrderedDict((
     ('Capacity (GW)', {'file': 'CONVqn.gdx', 'param': 'CONVqnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'GW', 'mult': 0.001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
     ('Generation (TWh)', {'file': 'CONVqn.gdx', 'param': 'CONVqmnallyears', 'columns': ['tech', 'n', 'year', 'value'], 'unit': 'TWh', 'mult': 0.000001, 'reg': 'n', 'xaxis': 'year', 'series': 'tech', 'series_keys': display_techs.keys(), 'series_colors': display_techs_colors}),
@@ -74,6 +86,14 @@ plot_list = col.OrderedDict()
 plot_list['scenarios'] = col.OrderedDict()
 plot_list['combined'] = {}
 
+map_list = {}
+for scenario in scenarios:
+    map_list[scenario] = {'plot': 0, 'max_val': 0, 'glyphs':{}}
+    for regtype in hierarchy.columns.values.tolist():
+        map_list[scenario]['glyphs'][regtype] = {}
+        for region in hierarchy[regtype].unique():
+            map_list[scenario]['glyphs'][regtype][region] = {'groups': {}, 'value':0}
+
 scenario_legend_string = '<div class="legend-header">Scenarios</div><div class="legend-body">'
 for i, scenario in enumerate(scenarios):
     scenario_legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + scenario_colors[i] + ';"></span>'
@@ -88,10 +108,20 @@ for tech in techs_reversed:
     tech_legend_string += '<span class="legend-text">' + tech + '</span></div>'
 tech_legend_string += '</div>'
 
+map_legend_steps = 5
+def build_map_legend(max_value=200):
+    map_legend_string = '<div class="legend-header">Map ranges</div><div class="legend-body">'
+    for legend_index in range(map_legend_steps):
+        map_legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + scenario_colors[legend_index] + ';"></span>'
+        map_legend_string += '<span class="legend-text">' + str(int(legend_index*max_value/map_legend_steps)) + ' - ' + str(int((legend_index+1)*max_value/map_legend_steps)) +'</span></div>'
+    map_legend_string += '</div>'
+    return map_legend_string
+
 widgets = col.OrderedDict((
     ('legends_heading', bmw.Div(text='Legends', id='legends_heading')),
     ('techs_legend', bmw.Div(text=tech_legend_string, id='techs_legend')),
     ('scenarios_legend', bmw.Div(text=scenario_legend_string, id='scenarios_legend')),
+    ('maps_legend', bmw.Div(text=build_map_legend(), id='maps_legend')),
     ('show_heading', bmw.Div(text='Show', id='show_heading')),
     ('scenarios_compare', bmw.Select(value='Show All', options=['Show All','Show Difference with Base'], id='scenarios_compare')),
     ('result', bmw.Select(value=gdx_structure.keys()[0], options=gdx_structure.keys(), id='result')),
@@ -109,6 +139,7 @@ widgets = col.OrderedDict((
     ('techs', bmw.CheckboxGroup(labels=display_techs.keys(), active=range(len(display_techs.keys())), id='techs')),
     ('regtype', bmw.Select(value='country', options=hierarchy.columns.values.tolist(), id='regtype')),
     ('region', bmw.Select(value='USA', options=hierarchy['country'].unique().tolist(), id='region')),
+    ('map_subregtype', bmw.Select(value='st', options=hierarchy.columns.values.tolist(), id='map_subregtype')),
     ('year', bmw.Select(value='All years', options=['All years'] + [str(x) for x in years_full], id='year')),
     ('timeslice', bmw.Select(value='All timeslices', options=['All timeslices','H1','H2','H3'], id='timeslice')),
     ('scale_axes', bmw.RadioButtonGroup(labels=['Sync Axes', 'Scale Independently'], id='scale_axes')),
@@ -131,6 +162,11 @@ def initialize():
         plot['figure'].xaxis.major_label_orientation = 'vertical'
         plot['figure'].xaxis.major_label_standoff = 25
         plot_list['scenarios'][scenario_name] = plot
+        
+        #build maps
+        map_plot = bm.Plot(x_range=bm.DataRange1d(), y_range=bm.DataRange1d(), plot_width=450, plot_height=250, toolbar_location=None)
+        map_plot.title.text = scenario_name
+        map_list[scenario_name]['plot']= map_plot
     
     combined_plot = {
         'figure': bp.Figure(toolbar_location='right', tools='save,pan,box_zoom,reset', width=250, height=225),
@@ -148,6 +184,7 @@ def build_plots():
     for scenario in scenarios:
         build_plot(scenario, result)
     build_combined_chart(result)
+    build_maps()
 
 def build_plot(scenario, result):
     df_base = data_obj[result]['scenarios'][scenario]['dataframe']
@@ -157,7 +194,7 @@ def build_plot(scenario, result):
     df = filter_dataframe(df_base)
     if widgets['charttype'].value == 'Stacked Area':
         build_stacked_area_chart(df, scenario, result)
-
+        
 def build_combined_chart(result):
     df_base = data_obj[result]['combined']['dataframe']
     if isinstance(df_base, int):
@@ -166,6 +203,106 @@ def build_combined_chart(result):
     df = filter_dataframe(df_base, combined=True)
     build_combined_line_chart(df)
 
+def build_maps():
+    result = widgets['result'].value
+    for scenario in scenarios:
+        build_map(scenario, result)
+    
+    #find max value of subregions
+    max_value = max([a['max_val'] for a in map_list.values()])
+    widgets['maps_legend'].text = build_map_legend(max_value)
+    shade_maps(max_value)
+    
+def build_map(scenario, result):
+    #get current map
+    plot = map_list[scenario]['plot']
+    
+    #get relevant data for this result and scenario
+    df_base = data_obj[result]['scenarios'][scenario]['dataframe']
+    
+    #get selected region and subregion type
+    regtype = widgets['regtype'].value
+    region = widgets['region'].value
+    subregtype = widgets['map_subregtype'].value
+    
+    #get all subregions of selected region
+    #first get all regions associated with selected region 
+    associated_regions = hierarchy[hierarchy[regtype].isin([region])]
+    #then filter by the subregion type
+    subregions = associated_regions[subregtype].unique()
+
+    #get the boundaries of the subregion type
+    df_subregtype_boundaries = region_boundaries[subregtype]
+
+    #get max and min coordinates for all subregions, and use to set width of plot
+    df_subregion_boundaries = df_subregtype_boundaries[df_subregtype_boundaries['id'].isin(subregions)]
+    min_x = df_subregion_boundaries['x'].min()
+    max_x = df_subregion_boundaries['x'].max()
+    min_y = df_subregion_boundaries['y'].min()
+    max_y = df_subregion_boundaries['y'].max()
+    plot.x_range.start = min_x
+    plot.y_range.start = min_y
+    plot_aspect = plot.plot_width/plot.plot_height
+    glyphs_aspect = (max_x - min_x)/(max_y - min_y)
+    if glyphs_aspect > plot_aspect:
+        plot.x_range.end = max_x
+        plot.y_range.end = min_y + (max_x - min_x)/plot_aspect
+    else:
+        plot.y_range.end = max_y
+        plot.x_range.end = min_x + (max_y - min_y)*plot_aspect
+
+    #Hide all glyphs in this map  
+    for subregtype_iter in map_list[scenario]['glyphs'].values():
+        for subreg_iter in subregtype_iter.values():
+            for glyph in subreg_iter['groups'].values():
+                glyph.visible = False
+    
+    #Set the values (shading) and glyphs for each subregion
+    for subreg in subregions:
+        #Set the value for this subregion, which will be used for shading
+        df_subreg = filter_dataframe(df_base, combined=True, regtype=subregtype, region=subreg)
+        value = df_subreg.transpose().values.tolist()[0][-1] #to get the final year's value
+        map_list[scenario]['glyphs'][subregtype][subreg]['value'] = value
+        
+        #check if glyphs exist and, if not, make glyphs
+        if not map_list[scenario]['glyphs'][subregtype][subreg]['groups']:
+            #get the x,y coordinates and groups of this subregion
+            df_map_subreg = df_subregtype_boundaries[df_subregtype_boundaries['id'] == subreg]
+            #for each group, draw glyph
+            for subreg_group in df_map_subreg['group'].unique():
+                df_map_subreg_group = df_map_subreg[df_map_subreg['group'] == subreg_group]
+                source = bm.ColumnDataSource(dict(x=df_map_subreg_group['x'], y=df_map_subreg_group['y']))
+                glyph = bmg.Patch(x="x", y="y", fill_color="#a6cee3")
+                plot.add_glyph(source, glyph)
+                map_list[scenario]['glyphs'][subregtype][subreg]['groups'][subreg_group] = glyph
+        #if glyphs already exist, we need to show them, because we hid them above
+        else:
+            for glyph in map_list[scenario]['glyphs'][subregtype][subreg]['groups'].values():
+                glyph.visible = True
+    
+    #update the maximum values for each scenario map
+    map_list[scenario]['max_val'] = max([map_list[scenario]['glyphs'][subregtype][subreg]['value'] for subreg in subregions])
+
+def shade_maps(max_value):
+    #get selected region and subregion type
+    regtype = widgets['regtype'].value
+    region = widgets['region'].value
+    subregtype = widgets['map_subregtype'].value
+
+    #get all subregions of selected region
+    #first get all regions associated with selected region 
+    associated_regions = hierarchy[hierarchy[regtype].isin([region])]
+    #then filter by the subregion type
+    subregions = associated_regions[subregtype].unique()
+    for scenario in scenarios:
+        for subreg in subregions:
+            value = map_list[scenario]['glyphs'][subregtype][subreg]['value']
+            bin_index = int(map_legend_steps*value/max_value)
+            if bin_index == map_legend_steps: bin_index = bin_index - 1
+            for glyph in map_list[scenario]['glyphs'][subregtype][subreg]['groups'].values():   
+                glyph.fill_color = scenario_colors[bin_index]
+    
+    
 def build_stacked_area_chart(df, scenario, result):
     x_values = np.hstack((df.index, df.index[::-1])).tolist()
     y_values = stack_lists(df.transpose().values.tolist())
@@ -267,13 +404,13 @@ def stack_lists(raw_lists):
         last_stack = next_stack
     return stacked_lists
 
-def filter_dataframe(df_base, combined=False):
+def filter_dataframe(df_base, combined=False, regtype=widgets['regtype'].value, region=widgets['region'].value):
     gdx_result = gdx_structure[widgets['result'].value]
     if 'series_keys' in gdx_result: 
         series_keys = gdx_result['series_keys']
     hier = hierarchy.drop_duplicates(gdx_result['reg'])
     df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
-    df = df[df[widgets['regtype'].value].isin([widgets['region'].value])]
+    df = df[df[regtype].isin([region])]
     if 'tech' in gdx_result['columns']:
         active_techs = [widgets['techs'].labels[i] for i in widgets['techs'].active]
         df = df[df['tech'].isin(active_techs)]
@@ -318,6 +455,9 @@ def general_filter_update(attrname, old, new):
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
+
+def update_map_subregtype(attrname, old, new):
+    build_maps()
 
 def update_x_min(attrname, old, new):
     for plot in plot_list['scenarios'].values():
@@ -371,6 +511,7 @@ widgets['techs'].on_change('active', general_filter_update)
 widgets['result'].on_change('value', general_filter_update)
 widgets['region'].on_change('value', general_filter_update)
 widgets['regtype'].on_change('value', update_regtype)
+widgets['map_subregtype'].on_change('value', update_map_subregtype)
 widgets['set_x_min'].on_change('value', update_x_min)
 widgets['set_x_max'].on_change('value', update_x_max)
 widgets['set_y_min'].on_change('value', update_y_min)
@@ -380,8 +521,11 @@ widgets['rerender'].on_click(rerender)
 widgets['download'].on_click(download)
 
 initialize()
-plots = [p['figure'] for p in plot_list['scenarios'].values()]
-plots.append(plot_list['combined']['figure'])
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
-plots_display = bl.column(plots, width=1000, id='plots_section')
+charts = [p['figure'] for p in plot_list['scenarios'].values()]
+charts.append(plot_list['combined']['figure'])
+charts_display = bl.column(charts, width=1000, id='charts_section')
+maps = [p['plot'] for p in map_list.values()]
+maps_display = bl.column(maps, width=1000, id='maps_section')
+plots_display = bl.column(charts_display, maps_display)
 bio.curdoc().add_root(bl.row([filters, plots_display]))
