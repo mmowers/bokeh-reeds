@@ -8,6 +8,9 @@ $(document).ready(function(){
         $('#modelid_set_y_min').toggle();
         $('#modelid_set_y_max').toggle();
     });
+    $('body').on('click', '#modelid_set_map_max_heading', function(){
+        $('#modelid_set_map_max').toggle();
+    });
     $('body').on('click', '#modelid_techs_heading', function(){
         $('#modelid_techs').toggle();
     });
