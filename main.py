@@ -86,7 +86,7 @@ plot_list = col.OrderedDict()
 plot_list['scenarios'] = col.OrderedDict()
 plot_list['combined'] = {}
 
-map_list = {}
+map_list = col.OrderedDict()
 for scenario in scenarios:
     map_list[scenario] = {'plot': 0, 'max_val': 0, 'glyphs':{}}
     for regtype in hierarchy.columns.values.tolist():
