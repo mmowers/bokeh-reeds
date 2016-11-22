@@ -4,6 +4,15 @@
 .bk-markup{
     font-weight: bold;
 }
+#modelid_widgets_section{
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+#modelid_plots_section{
+    margin-left: 300px;
+}
 #modelid_scenarios_heading,
 #modelid_techs_heading,
 #modelid_set_axis_ranges_heading,
@@ -57,3 +66,4 @@
 .bk-grid-column{
     height: auto !important;
 }
+

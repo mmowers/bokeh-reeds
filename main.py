@@ -566,5 +566,5 @@ charts.append(plot_list['combined']['figure'])
 charts_display = bl.column(charts, width=1000, id='charts_section')
 maps = [p['plot'] for p in map_list.values()]
 maps_display = bl.column(maps, width=1000, id='maps_section')
-plots_display = bl.column(charts_display, maps_display)
+plots_display = bl.column(charts_display, maps_display, id='plots_section')
 bio.curdoc().add_root(bl.row([filters, plots_display]))
