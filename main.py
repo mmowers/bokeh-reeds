@@ -18,6 +18,8 @@ runs_path = 'C:/Users/mmowers/Bokeh/runs_test/'
 #runs_path = '//nrelqnap01d/ReEDS/FY16-RenewableTaxCreditExtensions-MRM-019743a-v2016/scenarios/runs/'
 #runs_path = '//nrelqnap01d/ReEDS/FY16-MissionInnovation-MRM-019743a-v2016/runs/nuclear 80 yr/runs/'
 
+showMaps = False #set to False to hide maps
+
 scenarios = os.walk(runs_path).next()[1]
 scenario_colors = 5*['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#ffffbf', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']
 regions_full = {
@@ -180,7 +182,7 @@ def initialize():
     plot_list['combined'] = combined_plot
 
     build_plots()
-    build_maps()
+    if showMaps: build_maps()
 
 def build_plots():
     result = widgets['result'].value
@@ -470,28 +472,31 @@ def update_scenarios(attrname, old, new):
 
 def update_techs(attrname, old, new):
     build_plots()
-    set_maps_values()
-    shade_maps()
+    if showMaps:
+        set_maps_values()
+        shade_maps()
 
 def update_result(attrname, old, new):
     build_plots()
-    set_maps_values()
-    shade_maps()
+    if showMaps:
+        set_maps_values()
+        shade_maps()
 
 def update_region(attrname, old, new):
     build_plots()
-    build_maps()
+    if showMaps: build_maps()
 
 def update_regtype(attrname, old, new):
     widgets['region'].options = hierarchy[widgets['regtype'].value].unique().tolist()
     widgets['region'].value = widgets['region'].options[0]
 
 def update_year(attrname, old, new):
-    set_maps_values()
-    shade_maps()
+    if showMaps:
+        set_maps_values()
+        shade_maps()
 
 def update_map_subregtype(attrname, old, new):
-    build_maps()
+    if showMaps: build_maps()
 
 def update_x_min(attrname, old, new):
     for plot in plot_list['scenarios'].values():
@@ -514,7 +519,7 @@ def update_y_max(attrname, old, new):
     plot_list['combined']['figure'].y_range.end = float(new)
 
 def update_map_max(attrname, old, new):
-    shade_maps()
+    if showMaps: shade_maps()
 
 def scale_axes(new):
     if new == 0: sync_axes()
@@ -564,7 +569,10 @@ filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
 charts = [p['figure'] for p in plot_list['scenarios'].values()]
 charts.append(plot_list['combined']['figure'])
 charts_display = bl.column(charts, width=1000, id='charts_section')
-maps = [p['plot'] for p in map_list.values()]
-maps_display = bl.column(maps, width=1000, id='maps_section')
-plots_display = bl.column(charts_display, maps_display, id='plots_section')
+if showMaps:
+    maps = [p['plot'] for p in map_list.values()]
+    maps_display = bl.column(maps, width=1000, id='maps_section')
+    plots_display = bl.column(charts_display, maps_display, id='plots_section')
+else:
+    plots_display = bl.column(charts_display, id='plots_section')
 bio.curdoc().add_root(bl.row([filters, plots_display]))
