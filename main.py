@@ -149,6 +149,7 @@ widgets = col.OrderedDict((
     ('scale_axes', bmw.RadioButtonGroup(labels=['Sync Axes', 'Scale Independently'], id='scale_axes')),
     ('rerender', bmw.Button(label='Re-render', button_type='success', id='rerender')),
     ('download', bmw.Button(label='Download CSV', button_type='success', id='download')),
+    ('download_subreg', bmw.Button(label='Download Subregion CSV', button_type='success', id='download_subreg')),
 ))
 
 def initialize():
@@ -467,6 +468,37 @@ def scale_axes_independently():
         plot['figure'].y_range.start = plot['y_min']
         plot['figure'].y_range.end = plot['y_max']
 
+def download(aggregated=True):
+    result = widgets['result'].value
+    region = widgets['region'].value
+    regtype = widgets['regtype'].value
+    subregtype = widgets['map_subregtype'].value
+    df_base = data_obj[result]['combined']['dataframe']
+    gdx_result = gdx_structure[result]
+    hier = hierarchy.drop_duplicates(gdx_result['reg'])
+    df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
+    df = df[df[regtype].isin([region])]
+    if 'tech' in gdx_result['columns']:
+        active_techs = [widgets['techs'].labels[i] for i in widgets['techs'].active]
+        df = df[df['tech'].isin(active_techs)]
+    if 'series' in gdx_result:
+        if aggregated == False:
+            df = df.groupby(['scenario', subregtype, gdx_result['xaxis'], gdx_result['series']], as_index=False, sort=False)['value'].sum()
+        else:
+            df = df.groupby(['scenario', gdx_result['xaxis'], gdx_result['series']], as_index=False, sort=False)['value'].sum()
+    else:
+        if aggregated == False:
+            df = df.groupby(['scenario', subregtype, gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
+        else:
+            df = df.groupby(['scenario', gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
+    if not isinstance(df, pd.DataFrame):
+        df = df.to_frame()
+    if aggregated == False:
+        df.to_csv('../../downloads/out_subregions.csv', index=False)
+    else:
+        df.to_csv('../../downloads/out_aggregated.csv', index=False)
+
+
 def update_scenarios(attrname, old, new):
     build_plots()
 
@@ -529,24 +561,11 @@ def rerender():
     build_plots()
     scale_axes(widgets['scale_axes'].active)
 
-def download():
-    result = widgets['result'].value
-    df_base = data_obj[result]['combined']['dataframe']
-    gdx_result = gdx_structure[result]
-    hier = hierarchy.drop_duplicates(gdx_result['reg'])
-    df = pd.merge(df_base, hier, how='left', on=gdx_result['reg'])
-    df = df[df[widgets['regtype'].value].isin([widgets['region'].value])]
-    if 'tech' in gdx_result['columns']:
-        active_techs = [widgets['techs'].labels[i] for i in widgets['techs'].active]
-        df = df[df['tech'].isin(active_techs)]
-    if 'series' in gdx_result:
-        df = df.groupby(['scenario', gdx_result['xaxis'], gdx_result['series']], as_index=False, sort=False)['value'].sum()
-    else:
-        df = df.groupby(['scenario', gdx_result['xaxis']], as_index=False, sort=False)['value'].sum()
-    if not isinstance(df, pd.DataFrame):
-        df = df.to_frame()
-    df.to_csv('../../downloads/out.csv', index=False)
+def download_handler():
+    download()
 
+def download_subreg_handler():
+    download(aggregated=False)
 
 widgets['scenarios'].on_change('active', update_scenarios)
 widgets['techs'].on_change('active', update_techs)
@@ -562,7 +581,8 @@ widgets['set_y_max'].on_change('value', update_y_max)
 widgets['set_map_max'].on_change('value', update_map_max)
 widgets['scale_axes'].on_click(scale_axes)
 widgets['rerender'].on_click(rerender)
-widgets['download'].on_click(download)
+widgets['download'].on_click(download_handler)
+widgets['download_subreg'].on_click(download_subreg_handler)
 
 initialize()
 filters = bl.widgetbox(widgets.values(), width=300, id='widgets_section')
